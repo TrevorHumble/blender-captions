@@ -54,6 +54,8 @@ class CAPTIONS_PT_main(Panel):
             op.which = 'END'
 
         layout.separator()
+        layout.prop(caps, "flip_orientation", text="Flip text orientation")
+
         row = layout.row()
         row.operator("captions.clear_all", icon='X')
         row.operator("captions.print_api", text="API", icon='HELP')

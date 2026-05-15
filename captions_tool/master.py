@@ -62,6 +62,7 @@ def _attach_to_camera(obj, scene):
     cam = scene.camera
     obj.parent = cam
     obj.matrix_parent_inverse = mathutils.Matrix.Identity(4)
+    obj.rotation_euler = (0.0, 0.0, 0.0)
 
     corners = cam.data.view_frame(scene=scene)
     near_z = abs(corners[0].z)
@@ -75,7 +76,8 @@ def _attach_to_camera(obj, scene):
 
     obj.location = (0.0, bottom_y + frame_height * _BOTTOM_MARGIN, -_DEPTH)
     s = frame_height * _TEXT_HEIGHT
-    obj.scale = (s, s, s)
+    sx = -s if scene.captions.flip_orientation else s
+    obj.scale = (sx, s, s)
 
     # Word-wrap inside the camera frame (with a small horizontal margin).
     # text_box width is in the text's local units; convert by dividing by scale.

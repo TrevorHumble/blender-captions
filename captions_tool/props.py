@@ -16,6 +16,16 @@ from bpy.props import (
 from bpy.types import PropertyGroup
 
 
+def _on_flip_orientation_changed(self, context):
+    """Re-orient the existing master when the user flips the toggle."""
+    scene = context.scene
+    obj = scene.captions.master_object
+    if obj is None:
+        return
+    sx = abs(obj.scale.x)
+    obj.scale.x = -sx if scene.captions.flip_orientation else sx
+
+
 class CaptionLine(PropertyGroup):
     id: IntProperty()
     text: StringProperty(default="...")
@@ -31,6 +41,11 @@ class CaptionSettings(PropertyGroup):
     next_id: IntProperty(default=1, min=1)
     auto_parent_to_camera: BoolProperty(default=True)
     emission_strength: bpy.props.FloatProperty(default=2.0, min=0.0)
+    flip_orientation: BoolProperty(
+        default=False,
+        description="If captions look mirrored from the camera, toggle this on",
+        update=_on_flip_orientation_changed,
+    )
 
 
 _CLASSES = (CaptionLine, CaptionSettings)
