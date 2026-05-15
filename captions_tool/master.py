@@ -30,9 +30,17 @@ def get(scene):
 
 
 def create(scene):
-    """Create the master Text object. Idempotent: returns the existing one if any."""
+    """Create the master Text object. Idempotent: returns the existing one if any.
+
+    If an existing master is found but isn't linked to this scene (for example
+    the user deleted it from the outliner while the PointerProperty kept the
+    object alive in bpy.data), re-link it to the scene's master collection so
+    it shows up in the viewport again.
+    """
     existing = get(scene)
     if existing is not None:
+        if scene not in existing.users_scene:
+            scene.collection.objects.link(existing)
         return existing
 
     curve = bpy.data.curves.new(MASTER_NAME, 'FONT')

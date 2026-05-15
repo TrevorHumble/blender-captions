@@ -152,17 +152,25 @@ class CAPTIONS_OT_move_line(Operator):
 
 class CAPTIONS_OT_select_master(Operator):
     """Select the captions text object in the viewport so you can grab,
-    rotate, or scale it.
+    rotate, or scale it. Re-links the object to the active scene if a
+    previous outliner delete left it orphaned.
     """
     bl_idname = "captions.select_master"
     bl_label = "Select Captions Object"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        m = master.get(context.scene)
+        scene = context.scene
+        m = master.get(scene)
         if m is None:
             self.report({'WARNING'}, "No captions object exists yet.")
             return {'CANCELLED'}
+
+        # If the object got orphaned (deleted from outliner while a
+        # PointerProperty held a reference), re-link it before selecting.
+        if scene not in m.users_scene:
+            scene.collection.objects.link(m)
+
         for obj in context.view_layer.objects:
             obj.select_set(obj is m)
         context.view_layer.objects.active = m
