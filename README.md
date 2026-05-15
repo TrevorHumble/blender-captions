@@ -16,7 +16,7 @@ timeline, drag to retime.
 
 ## Install
 
-1. Grab [`dist/captions_tool-0.1.6.zip`](dist/captions_tool-0.1.6.zip) from this
+1. Grab [`dist/captions_tool-0.1.7.zip`](dist/captions_tool-0.1.7.zip) from this
    repo (also attached to the corresponding GitHub Release).
 2. Blender → Edit → Preferences → Add-ons → Install... → pick the zip.
 3. Enable "Animation: Captions".
@@ -29,7 +29,7 @@ try installing again.
 To rebuild the zip after editing the source:
 
 ```powershell
-Compress-Archive -Force -Path .\captions_tool -DestinationPath .\dist\captions_tool-0.1.6.zip
+Compress-Archive -Force -Path .\captions_tool -DestinationPath .\dist\captions_tool-0.1.7.zip
 ```
 
 ## Use

@@ -14,9 +14,10 @@ Encoding:
 """
 import bpy
 
+from .events import compute_events, NO_CAPTION as _NONE
+
 _PROP = "caption_idx"
 _PATH = f'["{_PROP}"]'
-_NONE = -1
 
 
 def write(master_obj, lines, gap_frames=0):
@@ -32,7 +33,7 @@ def write(master_obj, lines, gap_frames=0):
         master_obj[_PROP] = _NONE
         return
 
-    events = _events_for(lines, gap_frames)
+    events = compute_events(lines, gap_frames)
     for frame, value in events:
         master_obj[_PROP] = value
         master_obj.keyframe_insert(data_path=_PATH, frame=frame)
@@ -80,59 +81,6 @@ def active_line_id(master_obj, frame):
 
 
 # ---- internals --------------------------------------------------------------
-
-def _events_for(lines, gap_frames=0):
-    """Compute (frame, value) keyframe events from the line list.
-
-    Each line contributes a start keyframe (frame=line.start, value=line.id).
-    A "-1" end-sentinel is added at line.end ONLY if no other line is in
-    progress at that frame -- otherwise the still-active line would be cut off.
-
-    `gap_frames`: when a line ends at the exact same frame another line starts,
-    shift the end-sentinel earlier by this many frames so the screen briefly
-    blanks out before the next line. 0 = no gap (lines run continuously).
-
-    Overlap policy: 'later start wins' (the line whose start frame is most
-    recently passed takes the screen).
-    """
-    by_frame = {}
-    sorted_lines = sorted(lines, key=lambda l: l.start)
-    starts_set = {l.start for l in sorted_lines}
-
-    # Leading sentinel: ensures "no caption" reads correctly before the first
-    # line. Without this, Blender's F-curve extrapolates the first keyframe's
-    # value backward to frame -infinity and the first line appears to play
-    # forever before its actual start.
-    first_start = sorted_lines[0].start
-    by_frame[first_start - 1] = _NONE
-
-    for line in sorted_lines:
-        by_frame[line.start] = line.id
-
-    for line in sorted_lines:
-        sentinel_frame = line.end
-        # If another line starts exactly when this line ends, pull the sentinel
-        # earlier to create a visible blank gap between consecutive lines.
-        if gap_frames > 0 and line.end in starts_set:
-            sentinel_frame = line.end - gap_frames
-
-        if sentinel_frame in by_frame:
-            continue
-
-        # Skip the sentinel when another line is in-progress at line.end (the
-        # ranges overlap rather than abut), or that still-active line would
-        # get cut off.
-        covering = any(
-            other is not line and other.start <= line.end < other.end
-            for other in sorted_lines
-        )
-        if covering:
-            continue
-
-        by_frame[sentinel_frame] = _NONE
-
-    return sorted(by_frame.items())
-
 
 def _ensure_prop(obj):
     if _PROP not in obj.keys():

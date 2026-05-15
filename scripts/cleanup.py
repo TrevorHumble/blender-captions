@@ -11,11 +11,14 @@ import sys
 import bpy
 
 CAPTION_CLASSES = [
-    # Order doesn't matter for unregister_class
+    # Order doesn't matter for unregister_class.
+    # Keep this list in sync with _CLASSES tuples across props.py, operators.py,
+    # and ui.py. tests/lint/check.py verifies this automatically.
     "CaptionLine", "CaptionSettings",
-    "CAPTIONS_UL_lines", "CAPTIONS_PT_main",
-    "CAPTIONS_OT_create_master_object", "CAPTIONS_OT_add_line",
-    "CAPTIONS_OT_remove_line", "CAPTIONS_OT_set_active_frame",
+    "CAPTIONS_UL_lines", "CAPTIONS_PT_main", "CAPTIONS_PT_advanced",
+    "CAPTIONS_OT_create_master_object", "CAPTIONS_OT_select_master",
+    "CAPTIONS_OT_add_line", "CAPTIONS_OT_remove_line",
+    "CAPTIONS_OT_move_line", "CAPTIONS_OT_set_active_frame",
     "CAPTIONS_OT_bulk_import", "CAPTIONS_OT_clear_all",
     "CAPTIONS_OT_print_api",
 ]
