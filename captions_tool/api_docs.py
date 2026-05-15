@@ -48,9 +48,15 @@ Default replaces all existing lines. Set append=True to keep them.
 
 ### Edit
 ```python
-bpy.ops.captions.remove_line()                   # removes scene.captions.active_index
-bpy.ops.captions.set_active_frame(which='START') # or 'END'
+bpy.ops.captions.remove_line()                       # removes scene.captions.active_index
+bpy.ops.captions.move_line(direction='UP')           # or 'DOWN' -- swaps timing with chronological neighbor
+bpy.ops.captions.set_active_frame(which='START')     # or 'END'
 bpy.ops.captions.clear_all()
+```
+
+### Viewport helpers
+```python
+bpy.ops.captions.select_master()   # select + activate the master Text object
 ```
 
 ### Introspection
@@ -62,7 +68,8 @@ bpy.ops.captions.print_api()
 ## Data model
 
 ```python
-scene.captions.lines              # CollectionProperty
+scene.captions.lines              # CollectionProperty -- not sorted by collection order,
+                                  # but displayed sorted by start frame in the N-panel
 scene.captions.lines[0].id        # stable, auto-assigned -- DO NOT SET
 scene.captions.lines[0].text
 scene.captions.lines[0].start
@@ -70,6 +77,8 @@ scene.captions.lines[0].end
 scene.captions.active_index
 scene.captions.master_object      # PointerProperty -> the Text object
 scene.captions.default_duration   # frames added past start when end is omitted
+scene.captions.gap_frames         # blank frames between adjacent lines (default 12)
+scene.captions.filter_text        # case-insensitive substring filter for the N-panel list
 scene.captions.emission_strength  # white emission strength on the material
 ```
 
@@ -81,4 +90,7 @@ scene.captions.emission_strength  # white emission strength on the material
   both stay in sync.
 - The Text object is white emissive, parented to the active camera at the
   time of creation. You can re-parent or move it freely afterward.
+- The N-panel list is always displayed sorted by start frame; the underlying
+  collection order is preserved (each line has a stable id), so reordering
+  the display via the Up/Down arrows actually swaps timing values.
 """

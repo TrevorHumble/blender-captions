@@ -36,13 +36,32 @@ Compress-Archive -Force -Path .\captions_tool -DestinationPath .\dist\captions_t
 
 Open the N-panel in the 3D viewport and find the **Captions** tab.
 
-- **Create Master Object** (shown until you add a line) creates the single
-  Text object parented to the active camera at the bottom of frame.
-- **+** adds a line. The current frame becomes the line's start; end is
-  start + `default_duration` (48 frames).
-- Edit text, start, end in the active line box. The `key` buttons set start
-  or end to the current frame.
-- Drag keyframes in the dopesheet to retime — the panel auto-syncs.
+- **Create Master Object** appears until a captions text object exists. Click
+  it to spawn the single Text object, white emissive, parented to the active
+  camera at the bottom of frame.
+- **Select Captions Object** selects + activates the master Text object so you
+  can grab, rotate, or scale it directly.
+- The **filter** input above the list does a case-insensitive substring match
+  on line text. Always visible (no hidden dropdown).
+- The dialogue list is **always displayed sorted by start frame**, regardless
+  of the order you added the lines in.
+- **+** adds a line at the current frame (end = start + `default_duration`,
+  48 frames by default).
+- **−** removes the active line.
+- **▲ / ▼** swap the active line's start/end with its chronological neighbor —
+  pressing ▲ shifts that line earlier in playback, ▼ shifts it later.
+- The active-line box has inline editing for text + start + end. The 🔑
+  buttons snap start or end to the current playhead frame.
+- **Drag keyframes in the dopesheet** to retime — the panel auto-syncs.
+
+### Advanced (collapsed by default)
+
+- **Gap frames** (default 12): when one line ends at exactly the same frame
+  the next begins, a blank gap of this many frames is inserted automatically
+  so the screen briefly clears between adjacent lines. Set to 0 to disable.
+- **Refresh API Reference**: regenerates the `CAPTIONS_README` Text
+  datablock (see "API reference" below).
+- **Clear All Lines**: wipes the dialogue list and the F-curve.
 
 ## Script it
 
@@ -71,10 +90,12 @@ Operators (all under `bpy.ops.captions.*`):
 | Operator | Purpose |
 |---|---|
 | `create_master_object` | Idempotent. Creates the single text object. |
+| `select_master` | Selects + activates the master Text object in the viewport. |
 | `add_line(text, start, end)` | Add one line. `start=-1` uses current frame. |
 | `bulk_import(json_data, append=False)` | JSON array of `{text, start, end}`. |
 | `remove_line` | Remove the active line. |
-| `set_active_frame(which='START' or 'END')` | Set active line's frame to current. |
+| `move_line(direction='UP'\|'DOWN')` | Swap active line's timing with chronological neighbor. |
+| `set_active_frame(which='START'\|'END')` | Set active line's frame to current. |
 | `clear_all` | Wipe all lines. |
 | `print_api` | Write API docs to `bpy.data.texts["CAPTIONS_README"]`. |
 
