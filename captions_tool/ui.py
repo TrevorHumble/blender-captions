@@ -39,6 +39,11 @@ class CAPTIONS_PT_main(Panel):
         col = row.column(align=True)
         col.operator("captions.add_line", icon='ADD', text="")
         col.operator("captions.remove_line", icon='REMOVE', text="")
+        col.separator()
+        op_up = col.operator("captions.move_line", icon='TRIA_UP', text="")
+        op_up.direction = 'UP'
+        op_down = col.operator("captions.move_line", icon='TRIA_DOWN', text="")
+        op_down.direction = 'DOWN'
 
         if 0 <= caps.active_index < len(caps.lines):
             line = caps.lines[caps.active_index]
@@ -54,6 +59,7 @@ class CAPTIONS_PT_main(Panel):
             op.which = 'END'
 
         layout.separator()
+        layout.prop(caps, "gap_frames", text="Gap frames")
         layout.prop(caps, "flip_orientation", text="Flip text orientation")
 
         row = layout.row()

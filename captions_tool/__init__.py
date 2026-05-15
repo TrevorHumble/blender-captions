@@ -7,7 +7,7 @@ headless via bpy.ops.captions.* for AI / MCP workflows.
 bl_info = {
     "name": "Captions",
     "author": "Trevor Humble",
-    "version": (0, 1, 1),
+    "version": (0, 1, 2),
     "blender": (4, 2, 0),
     "location": "View3D > N-panel > Captions",
     "description": "Quick dialogue captions for animatics. One text object, draggable timing.",

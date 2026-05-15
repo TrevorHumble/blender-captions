@@ -24,7 +24,7 @@ def _rewrite(scene):
         return
     handlers.begin_write()
     try:
-        timeline.write(m, scene.captions.lines)
+        timeline.write(m, scene.captions.lines, scene.captions.gap_frames)
     finally:
         handlers.end_write()
 
@@ -105,6 +105,35 @@ class CAPTIONS_OT_set_active_frame(Operator):
         else:
             line.end = scene.frame_current
         _rewrite(scene)
+        return {'FINISHED'}
+
+
+class CAPTIONS_OT_move_line(Operator):
+    """Move the active line up or down in the list.
+
+    Line ids are stable, so the F-curve isn't touched -- this is purely a UI
+    reorder of the collection. Playback order is governed by start frame.
+    """
+    bl_idname = "captions.move_line"
+    bl_label = "Move Line"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    direction: EnumProperty(
+        items=[('UP', "Up", ""), ('DOWN', "Down", "")],
+        default='UP',
+    )
+
+    def execute(self, context):
+        caps = context.scene.captions
+        i = caps.active_index
+        n = len(caps.lines)
+        if i < 0 or i >= n:
+            return {'CANCELLED'}
+        target = i - 1 if self.direction == 'UP' else i + 1
+        if target < 0 or target >= n:
+            return {'CANCELLED'}
+        caps.lines.move(i, target)
+        caps.active_index = target
         return {'FINISHED'}
 
 
@@ -189,6 +218,7 @@ _CLASSES = (
     CAPTIONS_OT_create_master_object,
     CAPTIONS_OT_add_line,
     CAPTIONS_OT_remove_line,
+    CAPTIONS_OT_move_line,
     CAPTIONS_OT_set_active_frame,
     CAPTIONS_OT_bulk_import,
     CAPTIONS_OT_clear_all,

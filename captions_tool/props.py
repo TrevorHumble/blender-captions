@@ -26,6 +26,13 @@ def _on_flip_orientation_changed(self, context):
     obj.scale.x = -sx if scene.captions.flip_orientation else sx
 
 
+def _on_gap_changed(self, context):
+    """Rebuild the F-curve so the gap takes effect on existing lines."""
+    # Late import: props.py is imported before operators.py at register time.
+    from . import operators
+    operators._rewrite(context.scene)
+
+
 class CaptionLine(PropertyGroup):
     id: IntProperty()
     text: StringProperty(default="...")
@@ -45,6 +52,15 @@ class CaptionSettings(PropertyGroup):
         default=False,
         description="If captions look mirrored from the camera, toggle this on",
         update=_on_flip_orientation_changed,
+    )
+    gap_frames: IntProperty(
+        default=2,
+        min=0,
+        description=(
+            "Blank frames inserted between adjacent dialogue lines (when one line "
+            "ends exactly where the next begins). 0 = no automatic gap"
+        ),
+        update=_on_gap_changed,
     )
 
 

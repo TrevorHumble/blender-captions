@@ -15,7 +15,7 @@ MASTER_NAME = "Captions"
 MATERIAL_NAME = "Captions_Material"
 _DEPTH = 1.0          # how far in front of the camera the text lives
 _BOTTOM_MARGIN = 0.05 # fraction of frame height above bottom edge
-_TEXT_HEIGHT = 0.06   # text height as fraction of frame height
+_TEXT_HEIGHT = 0.08   # text height as fraction of frame height (~3 lines tall)
 
 
 def get(scene):
