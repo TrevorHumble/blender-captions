@@ -16,15 +16,20 @@ timeline, drag to retime.
 
 ## Install
 
-1. Grab [`dist/captions_tool-0.1.0.zip`](dist/captions_tool-0.1.0.zip) from this
+1. Grab [`dist/captions_tool-0.1.1.zip`](dist/captions_tool-0.1.1.zip) from this
    repo (also attached to the corresponding GitHub Release).
 2. Blender → Edit → Preferences → Add-ons → Install... → pick the zip.
 3. Enable "Animation: Captions".
 
+If install fails with "already registered as a subclass" or similar, the
+add-on is half-loaded from a previous attempt — run
+[`scripts/cleanup.py`](scripts/cleanup.py) from the Text Editor first, then
+try installing again.
+
 To rebuild the zip after editing the source:
 
 ```powershell
-Compress-Archive -Force -Path .\captions_tool -DestinationPath .\dist\captions_tool-0.1.0.zip
+Compress-Archive -Force -Path .\captions_tool -DestinationPath .\dist\captions_tool-0.1.1.zip
 ```
 
 ## Use
