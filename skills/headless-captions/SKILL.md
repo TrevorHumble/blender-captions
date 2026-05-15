@@ -125,7 +125,7 @@ caps.emission_strength   # float, white emission strength on the material
    - Install via a bootstrap script:
      ```python
      import bpy
-     bpy.ops.preferences.addon_install(filepath="/path/to/captions_tool-0.1.7.zip")
+     bpy.ops.preferences.addon_install(filepath="/path/to/captions_tool-0.1.8.zip")
      bpy.ops.preferences.addon_enable(module="captions_tool")
      bpy.ops.wm.save_userpref()
      ```

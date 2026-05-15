@@ -41,6 +41,9 @@ def create(scene):
     if existing is not None:
         if scene not in existing.users_scene:
             scene.collection.objects.link(existing)
+        # Self-heal: ensure existing masters get the latest "always on top"
+        # treatment without requiring a manual recreate.
+        existing.show_in_front = True
         return existing
 
     curve = bpy.data.curves.new(MASTER_NAME, 'FONT')
@@ -52,6 +55,10 @@ def create(scene):
     scene.collection.objects.link(obj)
     obj.data.materials.append(_ensure_material(scene.captions.emission_strength))
     obj.visible_shadow = False
+    # Draw on top of scene geometry. Works in the viewport and in EEVEE /
+    # EEVEE Next renders. Cycles ignores this flag -- for Cycles, a
+    # compositor view-layer trick is needed (see issue tracker).
+    obj.show_in_front = True
 
     if scene.camera and scene.captions.auto_parent_to_camera:
         _attach_to_camera(obj, scene)
