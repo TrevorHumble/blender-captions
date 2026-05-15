@@ -6,6 +6,6 @@ __pycache__/
 *.blend2
 .DS_Store
 Thumbs.db
-dist/
 build/
 *.zip
+!dist/*.zip

@@ -16,10 +16,16 @@ timeline, drag to retime.
 
 ## Install
 
-1. Download the latest release zip (or `git clone` this repo and zip the
-   `captions_tool` folder yourself).
+1. Grab [`dist/captions_tool-0.1.0.zip`](dist/captions_tool-0.1.0.zip) from this
+   repo (also attached to the corresponding GitHub Release).
 2. Blender → Edit → Preferences → Add-ons → Install... → pick the zip.
 3. Enable "Animation: Captions".
+
+To rebuild the zip after editing the source:
+
+```powershell
+Compress-Archive -Force -Path .\captions_tool -DestinationPath .\dist\captions_tool-0.1.0.zip
+```
 
 ## Use
 
