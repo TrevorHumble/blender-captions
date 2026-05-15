@@ -41,6 +41,10 @@ def write(master_obj, lines, gap_frames=0):
     if fc is not None:
         for kp in fc.keyframe_points:
             kp.interpolation = 'CONSTANT'
+            # BREAKDOWN renders as a small diamond, visually distinct from the
+            # default yellow KEYFRAME. Recolor it via Preferences > Themes >
+            # Dope Sheet > "Keyframe Breakdown" if you want a specific hue.
+            kp.type = 'BREAKDOWN'
         fc.update()
 
 
