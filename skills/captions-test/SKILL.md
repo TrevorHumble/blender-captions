@@ -52,18 +52,33 @@ covering edge cases.
 
 ## Tier 3 — Blender integration (requires Blender, ~30s startup)
 
+**This tier is destructive.** It clears caption lines, removes the master
+object, and mutates F-curves between tests. ALWAYS run in an isolated
+`--background --factory-startup` Blender process. Never against the user's
+working file, never via an MCP-connected live session.
+
 ```powershell
 $blender = "C:\Program Files\Blender Foundation\Blender 5.1\blender.exe"
 & $blender --background --factory-startup --python tests\integration\run.py
 ```
 
-Spawns a clean Blender, installs the addon from `dist/`, runs the integration
-suite, and reports. Covers:
+Or the wrapper:
+
+```powershell
+.\tasks.ps1 test-blender
+```
+
+The runner refuses to start if Blender is interactive (UI is up) unless
+`BLCAP_TEST_INTERACTIVE_OK=1` is set. Even with the bypass, it saves the
+current .blend before starting -- but a crash mid-test can still corrupt
+the in-memory scene. Don't bypass unless you understand the risk.
+
+Covers:
 
 - `bulk_import` round-trip via `timeline.read()`
 - frame_change_pre body updates at every line boundary
 - overlap "later start wins" regression (issue #9)
-- save/reload survives — re-attaches handlers, F-curve intact
+- save/reload survives -- re-attaches handlers, F-curve intact
 - orphaned master object recovery (v0.1.6 fix)
 
 ## All tiers at once
