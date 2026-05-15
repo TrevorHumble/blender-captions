@@ -109,10 +109,9 @@ class CAPTIONS_OT_set_active_frame(Operator):
 
 
 class CAPTIONS_OT_move_line(Operator):
-    """Move the active line up or down in the list.
-
-    Line ids are stable, so the F-curve isn't touched -- this is purely a UI
-    reorder of the collection. Playback order is governed by start frame.
+    """Move the active line up or down. Also swaps timing with the neighbor,
+    so 'Up' shifts the active line earlier in playback and 'Down' shifts it
+    later -- list position and time order stay aligned.
     """
     bl_idname = "captions.move_line"
     bl_label = "Move Line"
@@ -132,8 +131,22 @@ class CAPTIONS_OT_move_line(Operator):
         target = i - 1 if self.direction == 'UP' else i + 1
         if target < 0 or target >= n:
             return {'CANCELLED'}
+
+        # Capture both lines' timings before the move
+        a_start, a_end = caps.lines[i].start, caps.lines[i].end
+        b_start, b_end = caps.lines[target].start, caps.lines[target].end
+
+        # Reorder the collection
         caps.lines.move(i, target)
+
+        # After move(i, target), the active line is at `target` and the
+        # neighbor has shifted into `i`. Swap their timings so each line's
+        # PLAY POSITION matches its new LIST POSITION.
+        caps.lines[target].start, caps.lines[target].end = b_start, b_end
+        caps.lines[i].start, caps.lines[i].end = a_start, a_end
+
         caps.active_index = target
+        _rewrite(context.scene)
         return {'FINISHED'}
 
 
