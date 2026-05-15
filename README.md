@@ -1,9 +1,9 @@
 # Captions
 
-A quick-and-dirty dialogue captions add-on for Blender, designed for animatic
-workflows. One Text object displays every line; timing is keyframed and
-draggable in the dopesheet. Fully scriptable via `bpy.ops` for headless / MCP /
-AI-driven authoring.
+A quick-and-dirty dialogue captions add-on for Blender animatics. One Text
+object displays every line. Timing is keyframed and draggable in the
+dopesheet. Scriptable via `bpy.ops` for headless, MCP, and AI-driven
+authoring.
 
 ![Caption rendered in viewport](docs/florence.png)
 
@@ -22,7 +22,7 @@ timeline, drag to retime.
 3. Enable "Animation: Captions".
 
 If install fails with "already registered as a subclass" or similar, the
-add-on is half-loaded from a previous attempt — run
+add-on is half-loaded from a previous attempt. Run
 [`scripts/cleanup.py`](scripts/cleanup.py) from the Text Editor first, then
 try installing again.
 
@@ -48,11 +48,11 @@ Open the N-panel in the 3D viewport and find the **Captions** tab.
 - **+** adds a line at the current frame (end = start + `default_duration`,
   48 frames by default).
 - **−** removes the active line.
-- **▲ / ▼** swap the active line's start/end with its chronological neighbor —
-  pressing ▲ shifts that line earlier in playback, ▼ shifts it later.
-- The active-line box has inline editing for text + start + end. The 🔑
-  buttons snap start or end to the current playhead frame.
-- **Drag keyframes in the dopesheet** to retime — the panel auto-syncs.
+- **▲ / ▼** swap the active line's start/end with its chronological neighbor.
+  Pressing ▲ shifts that line earlier in playback, ▼ shifts it later.
+- The active-line box has inline editing for text, start, and end. The
+  keyframe-icon buttons snap start or end to the current playhead frame.
+- **Drag keyframes in the dopesheet** to retime. The panel auto-syncs.
 
 ### Advanced (collapsed by default)
 
