@@ -17,7 +17,7 @@ Three tiers, build up from cheap to expensive.
 ## Tier 1 — lint (no Blender, runs in under a second)
 
 ```powershell
-cd "C:\Users\thumb\OneDrive\Documents\Blender Assett Library\Addon\blender-captions"
+cd <REPO_ROOT>
 python tests\lint\check.py
 ```
 
@@ -41,7 +41,7 @@ check itself is wrong.
 ## Tier 2 — unit (pytest, no Blender)
 
 ```powershell
-cd "C:\Users\thumb\OneDrive\Documents\Blender Assett Library\Addon\blender-captions"
+cd <REPO_ROOT>
 pytest tests\unit
 ```
 
@@ -58,9 +58,13 @@ object, and mutates F-curves between tests. ALWAYS run in an isolated
 working file, never via an MCP-connected live session.
 
 ```powershell
-$blender = "C:\Program Files\Blender Foundation\Blender 5.1\blender.exe"
+$blender = "<BLENDER_EXE>"
 & $blender --background --factory-startup --python tests\integration\run.py
 ```
+
+`<BLENDER_EXE>` is platform-specific; a typical Windows path is
+`C:\Program Files\Blender Foundation\Blender 5.1\blender.exe`, but the
+user must confirm the actual location.
 
 Or the wrapper:
 

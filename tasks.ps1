@@ -50,6 +50,10 @@ function Invoke-BuildZip {
     $zipPath = "$root\dist\captions_tool-$version.zip"
     $tmp = "$env:TEMP\captions_tool-$version.zip"
     Write-Host "==> Building $zipPath" -ForegroundColor Cyan
+    # Strip __pycache__ first so the shipped zip doesn't carry dev-time
+    # bytecode (and so the lint check's byte-match against on-disk source
+    # stays clean).
+    Get-ChildItem -Path "$root\captions_tool" -Recurse -Directory -Filter __pycache__ -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
     Compress-Archive -Force -Path "$root\captions_tool" -DestinationPath $tmp
     Copy-Item -Force $tmp $zipPath
     Remove-Item $tmp

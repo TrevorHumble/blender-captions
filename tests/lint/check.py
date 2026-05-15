@@ -267,6 +267,46 @@ def check_operator_docstrings_and_options() -> None:
         check(f"{node.name} has a docstring", has_docstring)
 
 
+def check_no_user_specific_paths_in_skills() -> None:
+    """Skills must be generic. No personal paths like C:\\Users\\<name>\\
+    or /home/<name>/ should leak into committed skill files -- they'd
+    embarrass us when someone else clones the repo and finds someone's
+    home directory in a workflow doc.
+
+    This check excludes itself (this file contains the patterns as
+    string literals, which would otherwise trip the scan).
+    """
+    bad_patterns = [
+        re.compile(r"[Cc]:[\\/]+[Uu]sers[\\/]+[^\\/<>]+"),
+        re.compile(r"/home/[^/<>\s]+"),
+        re.compile(r"/Users/[^/<>\s]+"),
+    ]
+    this_file = Path(__file__).resolve()
+    offenders: list[str] = []
+    for root in (SKILLS, REPO / "tests", REPO / "scripts"):
+        if not root.exists():
+            continue
+        for path in root.rglob("*"):
+            if not path.is_file() or path.suffix not in (".md", ".py"):
+                continue
+            if path.resolve() == this_file:
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                continue
+            for pat in bad_patterns:
+                for match in pat.findall(text):
+                    if "<" in match and ">" in match:
+                        continue
+                    offenders.append(f"{path.relative_to(REPO)}: {match[:60]}")
+    check(
+        "no user-specific paths in skills/tests/scripts",
+        not offenders,
+        f"offenders: {offenders[:3]}",
+    )
+
+
 def check_master_name_constant_used() -> None:
     """No hard-coded 'Captions' string in object/curve lookup contexts.
 
@@ -316,6 +356,8 @@ def main() -> int:
     check_operator_docstrings_and_options()
     print("\nMASTER_NAME usage")
     check_master_name_constant_used()
+    print("\nNo personal paths in skills/tests")
+    check_no_user_specific_paths_in_skills()
 
     print()
     if ERRORS:
