@@ -6,10 +6,37 @@ from . import master
 
 
 class CAPTIONS_UL_lines(UIList):
-    def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
+    """Always-sorted-by-start-frame list with text-content filter."""
+
+    def draw_item(self, context, layout, data, item, icon,
+                  active_data, active_propname, index):
         row = layout.row(align=True)
         row.prop(item, "text", text="", emboss=False)
         row.label(text=f"{item.start}-{item.end}")
+
+    def filter_items(self, context, data, propname):
+        items = getattr(data, propname)
+        n = len(items)
+        caps = context.scene.captions
+
+        # Default: show everything
+        flt_flags = [self.bitflag_filter_item] * n
+
+        # Text filter (case-insensitive substring match on the line text)
+        needle = caps.filter_text.strip().lower()
+        if needle:
+            for i, item in enumerate(items):
+                if needle not in item.text.lower():
+                    flt_flags[i] &= ~self.bitflag_filter_item
+
+        # Sort: by start frame ascending. flt_neworder[i] = display position
+        # of item i.
+        sorted_indices = sorted(range(n), key=lambda idx: items[idx].start)
+        flt_neworder = [0] * n
+        for new_pos, orig_idx in enumerate(sorted_indices):
+            flt_neworder[orig_idx] = new_pos
+
+        return flt_flags, flt_neworder
 
 
 class CAPTIONS_PT_main(Panel):
@@ -25,9 +52,16 @@ class CAPTIONS_PT_main(Panel):
 
         if master.get(scene) is None:
             layout.operator("captions.create_master_object", icon='ADD')
-            layout.separator()
-            layout.operator("captions.print_api", text="API Reference", icon='HELP')
             return
+
+        layout.operator(
+            "captions.select_master",
+            text="Select Captions Object",
+            icon='RESTRICT_SELECT_OFF',
+        )
+
+        # Always-visible filter input (no triangle dropdown needed)
+        layout.prop(caps, "filter_text", text="", icon='VIEWZOOM')
 
         row = layout.row()
         row.template_list(
@@ -40,10 +74,8 @@ class CAPTIONS_PT_main(Panel):
         col.operator("captions.add_line", icon='ADD', text="")
         col.operator("captions.remove_line", icon='REMOVE', text="")
         col.separator()
-        op_up = col.operator("captions.move_line", icon='TRIA_UP', text="")
-        op_up.direction = 'UP'
-        op_down = col.operator("captions.move_line", icon='TRIA_DOWN', text="")
-        op_down.direction = 'DOWN'
+        col.operator("captions.move_line", icon='TRIA_UP', text="").direction = 'UP'
+        col.operator("captions.move_line", icon='TRIA_DOWN', text="").direction = 'DOWN'
 
         if 0 <= caps.active_index < len(caps.lines):
             line = caps.lines[caps.active_index]
@@ -51,23 +83,30 @@ class CAPTIONS_PT_main(Panel):
             box.prop(line, "text")
             r = box.row(align=True)
             r.prop(line, "start")
-            op = r.operator("captions.set_active_frame", text="", icon='KEYFRAME')
-            op.which = 'START'
+            r.operator("captions.set_active_frame", text="", icon='KEYFRAME').which = 'START'
             r = box.row(align=True)
             r.prop(line, "end")
-            op = r.operator("captions.set_active_frame", text="", icon='KEYFRAME')
-            op.which = 'END'
+            r.operator("captions.set_active_frame", text="", icon='KEYFRAME').which = 'END'
 
-        layout.separator()
+
+class CAPTIONS_PT_advanced(Panel):
+    bl_label = "Advanced"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Captions"
+    bl_parent_id = "CAPTIONS_PT_main"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw(self, context):
+        caps = context.scene.captions
+        layout = self.layout
         layout.prop(caps, "gap_frames", text="Gap frames")
-        layout.prop(caps, "flip_orientation", text="Flip text orientation")
-
-        row = layout.row()
-        row.operator("captions.clear_all", icon='X')
-        row.operator("captions.print_api", text="API", icon='HELP')
+        layout.separator()
+        layout.operator("captions.print_api", text="Refresh API Reference", icon='HELP')
+        layout.operator("captions.clear_all", text="Clear All Lines", icon='X')
 
 
-_CLASSES = (CAPTIONS_UL_lines, CAPTIONS_PT_main)
+_CLASSES = (CAPTIONS_UL_lines, CAPTIONS_PT_main, CAPTIONS_PT_advanced)
 
 
 def register():

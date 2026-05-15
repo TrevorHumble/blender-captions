@@ -109,9 +109,12 @@ class CAPTIONS_OT_set_active_frame(Operator):
 
 
 class CAPTIONS_OT_move_line(Operator):
-    """Move the active line up or down. Also swaps timing with the neighbor,
-    so 'Up' shifts the active line earlier in playback and 'Down' shifts it
-    later -- list position and time order stay aligned.
+    """Swap the active line's timing with its chronological neighbor.
+
+    The list is always displayed sorted by start frame, so 'Up' swaps timing
+    with the line that plays just before this one and 'Down' swaps with the
+    line that plays just after. Collection order is left alone -- the
+    UIList's filter_items re-sorts the display automatically.
     """
     bl_idname = "captions.move_line"
     bl_label = "Move Line"
@@ -128,25 +131,41 @@ class CAPTIONS_OT_move_line(Operator):
         n = len(caps.lines)
         if i < 0 or i >= n:
             return {'CANCELLED'}
-        target = i - 1 if self.direction == 'UP' else i + 1
-        if target < 0 or target >= n:
-            return {'CANCELLED'}
 
-        # Capture both lines' timings before the move
+        # Walk the list in start-frame order to find the chronological neighbor
+        sorted_indices = sorted(range(n), key=lambda idx: caps.lines[idx].start)
+        display_pos = sorted_indices.index(i)
+        target_display = display_pos - 1 if self.direction == 'UP' else display_pos + 1
+        if target_display < 0 or target_display >= n:
+            return {'CANCELLED'}
+        target = sorted_indices[target_display]
+
+        # Swap timings (text and id stay put)
         a_start, a_end = caps.lines[i].start, caps.lines[i].end
         b_start, b_end = caps.lines[target].start, caps.lines[target].end
+        caps.lines[i].start, caps.lines[i].end = b_start, b_end
+        caps.lines[target].start, caps.lines[target].end = a_start, a_end
 
-        # Reorder the collection
-        caps.lines.move(i, target)
-
-        # After move(i, target), the active line is at `target` and the
-        # neighbor has shifted into `i`. Swap their timings so each line's
-        # PLAY POSITION matches its new LIST POSITION.
-        caps.lines[target].start, caps.lines[target].end = b_start, b_end
-        caps.lines[i].start, caps.lines[i].end = a_start, a_end
-
-        caps.active_index = target
         _rewrite(context.scene)
+        return {'FINISHED'}
+
+
+class CAPTIONS_OT_select_master(Operator):
+    """Select the captions text object in the viewport so you can grab,
+    rotate, or scale it.
+    """
+    bl_idname = "captions.select_master"
+    bl_label = "Select Captions Object"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        m = master.get(context.scene)
+        if m is None:
+            self.report({'WARNING'}, "No captions object exists yet.")
+            return {'CANCELLED'}
+        for obj in context.view_layer.objects:
+            obj.select_set(obj is m)
+        context.view_layer.objects.active = m
         return {'FINISHED'}
 
 
@@ -229,6 +248,7 @@ class CAPTIONS_OT_print_api(Operator):
 
 _CLASSES = (
     CAPTIONS_OT_create_master_object,
+    CAPTIONS_OT_select_master,
     CAPTIONS_OT_add_line,
     CAPTIONS_OT_remove_line,
     CAPTIONS_OT_move_line,

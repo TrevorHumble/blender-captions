@@ -16,16 +16,6 @@ from bpy.props import (
 from bpy.types import PropertyGroup
 
 
-def _on_flip_orientation_changed(self, context):
-    """Re-orient the existing master when the user flips the toggle."""
-    scene = context.scene
-    obj = scene.captions.master_object
-    if obj is None:
-        return
-    sx = abs(obj.scale.x)
-    obj.scale.x = -sx if scene.captions.flip_orientation else sx
-
-
 def _on_gap_changed(self, context):
     """Rebuild the F-curve so the gap takes effect on existing lines."""
     # Late import: props.py is imported before operators.py at register time.
@@ -48,19 +38,18 @@ class CaptionSettings(PropertyGroup):
     next_id: IntProperty(default=1, min=1)
     auto_parent_to_camera: BoolProperty(default=True)
     emission_strength: bpy.props.FloatProperty(default=2.0, min=0.0)
-    flip_orientation: BoolProperty(
-        default=False,
-        description="If captions look mirrored from the camera, toggle this on",
-        update=_on_flip_orientation_changed,
-    )
     gap_frames: IntProperty(
-        default=2,
+        default=12,
         min=0,
         description=(
             "Blank frames inserted between adjacent dialogue lines (when one line "
             "ends exactly where the next begins). 0 = no automatic gap"
         ),
         update=_on_gap_changed,
+    )
+    filter_text: StringProperty(
+        name="Filter",
+        description="Show only lines containing this text (case-insensitive)",
     )
 
 

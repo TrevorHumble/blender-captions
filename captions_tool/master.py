@@ -76,8 +76,7 @@ def _attach_to_camera(obj, scene):
 
     obj.location = (0.0, bottom_y + frame_height * _BOTTOM_MARGIN, -_DEPTH)
     s = frame_height * _TEXT_HEIGHT
-    sx = -s if scene.captions.flip_orientation else s
-    obj.scale = (sx, s, s)
+    obj.scale = (s, s, s)
 
     # Word-wrap inside the camera frame (with a small horizontal margin).
     # text_box width is in the text's local units; convert by dividing by scale.
