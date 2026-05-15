@@ -76,18 +76,33 @@ def active_line_id(master_obj, frame):
 def _events_for(lines):
     """Compute (frame, value) keyframe events from the line list.
 
-    Events at the same frame collapse: a line-start always wins over a sentinel
-    so overlapping ranges resolve as 'later start takes over.'
+    Each line contributes a start keyframe (frame=line.start, value=line.id).
+    A "-1" end-sentinel is added at line.end ONLY if no other line is in
+    progress at that frame -- otherwise the still-active line would be cut off.
+    Overlap policy: 'later start wins' (the line whose start frame is most
+    recently passed takes the screen).
     """
     by_frame = {}
     sorted_lines = sorted(lines, key=lambda l: l.start)
-    starts_at = {l.start for l in sorted_lines}
+
+    # Leading sentinel: ensures "no caption" reads correctly before the first
+    # line. Without this, Blender's F-curve extrapolates the first keyframe's
+    # value backward to frame -infinity and the first line appears to play
+    # forever before its actual start.
+    first_start = sorted_lines[0].start
+    by_frame[first_start - 1] = _NONE
 
     for line in sorted_lines:
         by_frame[line.start] = line.id
 
     for line in sorted_lines:
-        if line.end not in starts_at and line.end not in by_frame:
+        if line.end in by_frame:
+            continue
+        covering = any(
+            other is not line and other.start <= line.end < other.end
+            for other in sorted_lines
+        )
+        if not covering:
             by_frame[line.end] = _NONE
 
     return sorted(by_frame.items())
