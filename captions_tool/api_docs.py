@@ -51,6 +51,7 @@ Default replaces all existing lines. Set append=True to keep them.
 bpy.ops.captions.remove_line()                       # removes scene.captions.active_index
 bpy.ops.captions.move_line(direction='UP')           # or 'DOWN' -- swaps timing with chronological neighbor
 bpy.ops.captions.set_active_frame(which='START')     # or 'END'
+bpy.ops.captions.slip(frames=12)                     # shift every line's start/end by N frames (negative shifts earlier, clamps to keep >= 0)
 bpy.ops.captions.clear_all()
 ```
 

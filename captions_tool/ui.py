@@ -101,6 +101,13 @@ class CAPTIONS_PT_advanced(Panel):
         caps = context.scene.captions
         layout = self.layout
         layout.prop(caps, "gap_frames", text="Gap frames")
+
+        layout.separator()
+        row = layout.row(align=True)
+        row.prop(caps, "slip_amount", text="Slip frames")
+        op = row.operator("captions.slip", text="Apply")
+        op.frames = caps.slip_amount
+
         layout.separator()
         layout.operator("captions.print_api", text="Refresh API Reference", icon='HELP')
         layout.operator("captions.clear_all", text="Clear All Lines", icon='X')

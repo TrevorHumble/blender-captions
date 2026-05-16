@@ -19,6 +19,7 @@ _spec.loader.exec_module(_events)
 compute_events = _events.compute_events
 NO_CAPTION = _events.NO_CAPTION
 pick_insertion_frame = _events.pick_insertion_frame
+shift_line_timings = _events.shift_line_timings
 
 
 @dataclass
@@ -254,3 +255,58 @@ def test_pick_insertion_no_active_duplicates_tail_append_safe():
     # Falls to Rule 4: max_end = 148, after = 148 + 12 = 160.
     lines = [L(1, 100, 148), L(2, 100, 148)]
     assert pick_insertion_frame(lines, -1, 120, 48, 12) == 160
+
+
+# ---------------------------------------------------------------------------
+# shift_line_timings -- "slip all lines" pure logic (issue #3)
+# ---------------------------------------------------------------------------
+
+
+def test_shift_lines_empty_returns_requested_frames():
+    effective, pairs = shift_line_timings([], 25)
+    assert effective == 25
+    assert pairs == []
+
+
+def test_shift_lines_positive_frames_shifts_forward():
+    effective, pairs = shift_line_timings([L(1, 10, 50), L(2, 60, 100)], 20)
+    assert effective == 20
+    assert pairs == [(30, 70), (80, 120)]
+
+
+def test_shift_lines_negative_frames_shifts_backward():
+    effective, pairs = shift_line_timings([L(1, 50, 100)], -30)
+    assert effective == -30
+    assert pairs == [(20, 70)]
+
+
+def test_shift_lines_negative_frames_clamps_to_zero():
+    """Requested -100 on a line starting at 5 -- clamp to -5."""
+    effective, pairs = shift_line_timings([L(1, 5, 50)], -100)
+    assert effective == -5
+    assert pairs == [(0, 45)]
+
+
+def test_shift_lines_clamp_preserves_relative_timing():
+    """When clamping is needed, the WHOLE batch clamps so no two lines
+    pile up at frame 0 from the slip itself.
+    """
+    effective, pairs = shift_line_timings([L(1, 5, 10), L(2, 20, 30)], -100)
+    # Earliest is 5, so max safe negative shift is -5. Apply -5 to both.
+    assert effective == -5
+    assert pairs == [(0, 5), (15, 25)]
+    # Relative spacing preserved.
+    assert pairs[1][0] - pairs[0][0] == 20 - 5  # original spacing
+
+
+def test_shift_lines_frames_zero_is_identity():
+    effective, pairs = shift_line_timings([L(1, 5, 10), L(2, 20, 30)], 0)
+    assert effective == 0
+    assert pairs == [(5, 10), (20, 30)]
+
+
+def test_shift_lines_positive_never_clamps():
+    """Positive slip can never push a line below 0, so no clamp logic fires."""
+    effective, pairs = shift_line_timings([L(1, 5, 10)], 1000)
+    assert effective == 1000
+    assert pairs == [(1005, 1010)]

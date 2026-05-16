@@ -19,6 +19,7 @@ CAPTION_CLASSES = [
     "CAPTIONS_OT_create_master_object", "CAPTIONS_OT_select_master",
     "CAPTIONS_OT_add_line", "CAPTIONS_OT_remove_line",
     "CAPTIONS_OT_move_line", "CAPTIONS_OT_set_active_frame",
+    "CAPTIONS_OT_slip",
     "CAPTIONS_OT_bulk_import", "CAPTIONS_OT_clear_all",
     "CAPTIONS_OT_print_api",
 ]

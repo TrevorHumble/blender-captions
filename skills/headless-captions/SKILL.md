@@ -192,6 +192,7 @@ All under `bpy.ops.captions.*`. Return `{'FINISHED'}` on success,
 | `remove_line` | — | Removes `scene.captions.lines[scene.captions.active_index]`. |
 | `move_line` | `direction: 'UP'\|'DOWN'` | Swaps timing with chronological neighbor. Not used by this skill. |
 | `set_active_frame` | `which: 'START'\|'END'` | Sets the active line's frame to current. Not used by this skill. |
+| `slip` | `frames: int` | Shifts every line's start and end by `frames`. Negative shifts that would push any line below 0 clamp the whole batch so relative timing is preserved. |
 | `clear_all` | — | Wipes the dialogue list and the F-curve. Not used by this skill. |
 | `select_master` | — | UI-only, no-op headless. Not used. |
 | `print_api` | — | Writes the API reference to `bpy.data.texts["CAPTIONS_README"]`. |
@@ -225,7 +226,7 @@ bpy.ops.wm.save_userpref()
 ```
 
 Replace `<ADDON_ZIP>` with the user-provided path (current build is
-`captions_tool-0.1.9.zip`).
+`captions_tool-0.1.10.zip`).
 
 ## Verifying captions landed correctly
 
