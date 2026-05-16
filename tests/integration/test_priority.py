@@ -146,10 +146,17 @@ def test_add_line_three_rapid_clicks_chain_non_overlapping():
     #   B: start = A.end + gap
     #   C: start = B.end + gap
     starts = [line.start for line in caps.lines]
-    assert starts[0] == 10
-    assert starts[1] == 50 + gap
-    assert starts[2] == starts[1] + dur + gap
-    assert starts[3] == starts[2] + dur + gap
+    ends = [line.end for line in caps.lines]
+    assert starts[0] == 10 and ends[0] == 50
+    assert starts[1] == 50 + gap and ends[1] == starts[1] + dur
+    assert starts[2] == starts[1] + dur + gap and ends[2] == starts[2] + dur
+    assert starts[3] == starts[2] + dur + gap and ends[3] == starts[3] + dur
+    # No overlap between any pair.
+    for i in range(len(caps.lines)):
+        for j in range(i + 1, len(caps.lines)):
+            assert ends[i] <= starts[j] or ends[j] <= starts[i], (
+                f"lines {i} [{starts[i]}-{ends[i]}] and {j} [{starts[j]}-{ends[j]}] overlap"
+            )
 
 
 def test_add_line_explicit_start_bypasses_smart_placement():

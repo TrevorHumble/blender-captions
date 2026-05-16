@@ -102,8 +102,12 @@ def pick_insertion_frame(lines, active_index, frame_current, duration, gap):
         active = lines[active_index]
         return max(_find_open_slot(ranges, active.end + gap, duration, gap), 0)
 
-    if _fits(ranges, frame_current, duration, gap):
-        return max(int(frame_current), 0)
+    # Clamp the playhead to >= 0 BEFORE checking fit. Otherwise a wildly
+    # negative frame_current can pass _fits (the padded window misses positive
+    # ranges entirely) and return 0, which may overlap an existing line.
+    clamped = max(int(frame_current), 0)
+    if _fits(ranges, clamped, duration, gap):
+        return clamped
 
     max_end = max(end for _, end in ranges)
     return max(_find_open_slot(ranges, max_end + gap, duration, gap), 0)
@@ -115,7 +119,7 @@ def _occupied_ranges(lines):
     Duplicates are preserved (legacy data may have multiple lines with the
     same start frame). Sort key is start; ties broken by end.
     """
-    return sorted(((int(l.start), int(l.end)) for l in lines), key=lambda r: (r[0], r[1]))
+    return sorted((int(l.start), int(l.end)) for l in lines)
 
 
 def _find_open_slot(ranges, after, duration, gap):
@@ -133,18 +137,14 @@ def _find_open_slot(ranges, after, duration, gap):
     function returns `after` unchanged.
     """
     candidate = int(after)
-    # Pad the candidate window by `gap` on both sides for the collision test.
     while True:
         blocker = _blocking_range(ranges, candidate, duration, gap)
         if blocker is None:
             return candidate
+        # A blocker (s, e) must have e + gap > candidate (otherwise the padded
+        # window couldn't have reached it), so the next probe always advances.
         _, blocker_end = blocker
-        next_candidate = blocker_end + gap
-        if next_candidate <= candidate:
-            # Defensive: ranges with end <= candidate already shouldn't block;
-            # bump forward by 1 to guarantee termination.
-            next_candidate = candidate + 1
-        candidate = next_candidate
+        candidate = blocker_end + gap
 
 
 def _blocking_range(ranges, frame, duration, gap):

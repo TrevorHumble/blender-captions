@@ -205,3 +205,52 @@ def test_pick_insertion_with_legacy_duplicate_starts_handled_safely():
     # Active is index 0. after = 148 + 12 = 160. Probe at 160 clear of both
     # ranges (160 >= 148 for both).
     assert pick_insertion_frame(lines, 0, 0, 48, 12) == 160
+
+
+def test_pick_insertion_negative_playhead_with_active_still_uses_active():
+    """AC8 across Rule 2: negative playhead must not poison the active-line
+    chaining path. Rule 2 ignores frame_current entirely.
+    """
+    lines = [L(1, 10, 50)]
+    assert pick_insertion_frame(lines, 0, -500, 48, 12) == 62
+
+
+def test_pick_insertion_negative_playhead_no_active_does_not_overlap():
+    """AC8 + 'never overlap' regression. With a wildly negative playhead
+    and no selection, the algorithm must not place a new line at 0 if doing
+    so would overlap an existing line near the start of the timeline.
+    """
+    # Existing line at (5, 100). frame_current=-1000.
+    # Rule 3: clamp playhead to 0 BEFORE fit-check. _fits(ranges, 0, 48, 12)
+    # has window [-12, 60] vs (5, 100) -> 60 > 5 and -12 < 100 -> blocked.
+    # Falls to Rule 4: max_end (100) + gap (12) = 112.
+    result = pick_insertion_frame([L(1, 5, 100)], -1, -1000, 48, 12)
+    assert result == 112
+
+
+def test_pick_insertion_negative_playhead_no_active_with_clear_zone_clamps():
+    """AC8 + Rule 3 happy path: negative playhead, no overlap risk near 0.
+    Clamp to 0 and use 0 as the start.
+    """
+    # Line at (500, 600), playhead at -100. Padded window from 0 is [-12, 60]
+    # vs (500, 600) -> clear. Returns 0.
+    result = pick_insertion_frame([L(1, 500, 600)], -1, -100, 48, 12)
+    assert result == 0
+
+
+def test_find_open_slot_half_open_at_boundary_returns_end():
+    """AC9 explicit: frame == range.end is FREE. _find_open_slot must return
+    the boundary frame without skipping past it.
+    """
+    find_open_slot = _events._find_open_slot
+    assert find_open_slot([(10, 50)], 50, 48, 0) == 50
+
+
+def test_pick_insertion_no_active_duplicates_tail_append_safe():
+    """Duplicate-start data must work on the tail-append path too, not just
+    the active-line path.
+    """
+    # Two duplicate ranges, no active, playhead inside one of them.
+    # Falls to Rule 4: max_end = 148, after = 148 + 12 = 160.
+    lines = [L(1, 100, 148), L(2, 100, 148)]
+    assert pick_insertion_frame(lines, -1, 120, 48, 12) == 160
