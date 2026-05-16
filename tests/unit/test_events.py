@@ -18,6 +18,7 @@ _events = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_events)
 compute_events = _events.compute_events
 NO_CAPTION = _events.NO_CAPTION
+pick_insertion_frame = _events.pick_insertion_frame
 
 
 @dataclass
@@ -139,3 +140,68 @@ def test_leading_sentinel_is_one_frame_before_earliest_start():
     before the chronologically-first line."""
     events = compute_events([L(2, 200, 210), L(1, 50, 60)])
     assert events[0] == (49, NO_CAPTION)
+
+
+# ---------------------------------------------------------------------------
+# pick_insertion_frame -- smart placement for add_line (issue #13)
+# ---------------------------------------------------------------------------
+
+
+def test_pick_insertion_empty_returns_frame_current():
+    """Rule 1: empty list -> use the playhead, clamped to 0."""
+    assert pick_insertion_frame([], -1, 100, 48, 12) == 100
+    assert pick_insertion_frame([], 0, 1, 48, 12) == 1
+
+
+def test_pick_insertion_empty_with_negative_playhead_clamps_to_zero():
+    """AC8: never return a negative start frame."""
+    assert pick_insertion_frame([], -1, -50, 48, 12) == 0
+
+
+def test_pick_insertion_no_active_playhead_in_clear_zone_uses_playhead():
+    """Rule 3: with no selection and a clean playhead, honor the playhead."""
+    lines = [L(1, 200, 250)]
+    # Playhead at 50, line is at 200-250 -- window [50, 98] padded by 12 = [38, 110].
+    # 110 < 200 - 12 = 188, so it's clear.
+    assert pick_insertion_frame(lines, -1, 50, 48, 12) == 50
+
+
+def test_pick_insertion_no_active_playhead_inside_line_appends_to_tail():
+    """Rule 4: playhead is mid-line, no selection -> append at tail."""
+    lines = [L(1, 10, 100)]
+    # Playhead at 50 is inside (10, 100). Rule 3 fails, Rule 4 fires.
+    # Tail = max_end (100) + gap (12) = 112.
+    assert pick_insertion_frame(lines, -1, 50, 48, 12) == 112
+
+
+def test_pick_insertion_with_active_chains_after_active():
+    """AC2: selected line at [10,50], gap=12, dur=48 -> new line at 62."""
+    lines = [L(1, 10, 50)]
+    assert pick_insertion_frame(lines, 0, 999, 48, 12) == 62
+
+
+def test_pick_insertion_with_active_walks_past_blocking_next_line():
+    """AC3: active [10,50] + blocking [62,150], gap=12, dur=48 -> 162.
+
+    Probe at 62 hits (62, 150). Skip to 150+12=162. Probe [162, 210]
+    against the same range -- 162 >= 150 so clear.
+    """
+    lines = [L(1, 10, 50), L(2, 62, 150)]
+    assert pick_insertion_frame(lines, 0, 0, 48, 12) == 162
+
+
+def test_pick_insertion_gap_zero_chains_back_to_back():
+    """AC5: gap=0 -> abutting lines stack at active.end."""
+    lines = [L(1, 10, 50)]
+    # With gap=0 and half-open semantics, frame 50 is FREE. Probe at 50 clear.
+    assert pick_insertion_frame(lines, 0, 0, 20, 0) == 50
+
+
+def test_pick_insertion_with_legacy_duplicate_starts_handled_safely():
+    """Pre-existing data may have duplicate start frames (a legacy bug).
+    The smart placement must not loop or crash on duplicates.
+    """
+    lines = [L(1, 100, 148), L(2, 100, 148)]
+    # Active is index 0. after = 148 + 12 = 160. Probe at 160 clear of both
+    # ranges (160 >= 148 for both).
+    assert pick_insertion_frame(lines, 0, 0, 48, 12) == 160

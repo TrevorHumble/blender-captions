@@ -225,7 +225,7 @@ bpy.ops.wm.save_userpref()
 ```
 
 Replace `<ADDON_ZIP>` with the user-provided path (current build is
-`captions_tool-0.1.8.zip`).
+`captions_tool-0.1.9.zip`).
 
 ## Verifying captions landed correctly
 

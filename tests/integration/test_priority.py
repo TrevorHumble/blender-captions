@@ -116,3 +116,68 @@ def test_keyframes_use_constant_breakdown():
             assert kp.interpolation == 'CONSTANT', f"frame {kp.co.x} has interp={kp.interpolation}"
             assert kp.type == 'BREAKDOWN', f"frame {kp.co.x} has type={kp.type}"
     assert found_any, "no caption_idx F-curve found"
+
+
+# ---------------------------------------------------------------------------
+# Smart placement for Add Line (issue #13)
+# ---------------------------------------------------------------------------
+
+
+def test_add_line_three_rapid_clicks_chain_non_overlapping():
+    """AC7: three rapid + clicks with a selected line at [10,50] produce
+    three new lines chained forward with default_duration spacing and
+    gap_frames between them. None of the four lines overlap.
+    """
+    # Seed one line at [10, 50] and select it.
+    _import([{"text": "FIRST", "start": 10, "end": 50}])
+    caps = bpy.context.scene.captions
+    caps.active_index = 0
+    gap = caps.gap_frames
+    dur = caps.default_duration
+
+    bpy.ops.captions.add_line(text="A")  # all defaults: start=-1, end=-1
+    bpy.ops.captions.add_line(text="B")
+    bpy.ops.captions.add_line(text="C")
+
+    assert len(caps.lines) == 4
+    # The new lines were appended in collection order, with active_index moving
+    # to each new one. By chaining off the prior active line:
+    #   A: start = 50 + gap, end = start + dur
+    #   B: start = A.end + gap
+    #   C: start = B.end + gap
+    starts = [line.start for line in caps.lines]
+    assert starts[0] == 10
+    assert starts[1] == 50 + gap
+    assert starts[2] == starts[1] + dur + gap
+    assert starts[3] == starts[2] + dur + gap
+
+
+def test_add_line_explicit_start_bypasses_smart_placement():
+    """AC6: passing start=N (N >= 0) explicitly always uses N, even if a
+    line is active that would otherwise anchor the smart logic.
+    """
+    _import([{"text": "FIRST", "start": 10, "end": 50}])
+    bpy.context.scene.captions.active_index = 0
+
+    bpy.ops.captions.add_line(text="EXACT", start=999, end=1099)
+    new_line = bpy.context.scene.captions.lines[-1]
+    assert new_line.start == 999
+    assert new_line.end == 1099
+
+
+def test_add_line_no_active_uses_playhead_in_clear_zone():
+    """AC4 inverse: no active line, playhead is in a clear zone -> honor
+    the playhead. (When playhead is INSIDE a line, the addon falls back
+    to append-at-tail; this test pins the clear-zone branch.)
+    """
+    _import([{"text": "FAR", "start": 500, "end": 600}])
+    caps = bpy.context.scene.captions
+    # Deselect by pointing active_index out of range.
+    caps.active_index = len(caps.lines)  # invalid -> Rule 3 / Rule 4
+
+    bpy.context.scene.frame_set(50)
+    bpy.ops.captions.add_line(text="USING_PLAYHEAD")
+    new_line = caps.lines[-1]
+    # frame_current=50 with dur=default_duration (48) and gap=12 padding.
+    # Padded window [38, 110] vs (500, 600): clear. Rule 3 hits, returns 50.
+    assert new_line.start == 50

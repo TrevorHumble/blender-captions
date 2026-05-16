@@ -9,7 +9,7 @@ import bpy
 from bpy.props import BoolProperty, EnumProperty, IntProperty, StringProperty
 from bpy.types import Operator
 
-from . import api_docs, handlers, master, timeline
+from . import api_docs, events, handlers, master, timeline
 
 
 def _allocate_id(scene):
@@ -53,7 +53,13 @@ class CAPTIONS_OT_add_line(Operator):
     def execute(self, context):
         scene = context.scene
         master.create(scene)
-        s = self.start if self.start >= 0 else scene.frame_current
+        s = self.start if self.start >= 0 else events.pick_insertion_frame(
+            list(scene.captions.lines),
+            scene.captions.active_index,
+            scene.frame_current,
+            scene.captions.default_duration,
+            scene.captions.gap_frames,
+        )
         e = self.end if self.end >= 0 else s + scene.captions.default_duration
 
         line = scene.captions.lines.add()
