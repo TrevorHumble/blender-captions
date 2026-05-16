@@ -183,6 +183,48 @@ class CAPTIONS_OT_select_master(Operator):
         return {'FINISHED'}
 
 
+class CAPTIONS_OT_slip(Operator):
+    """Shift every dialogue line's start and end by N frames.
+
+    Negative `frames` shifts earlier, positive shifts later. If a negative
+    shift would push any line below frame 0, the entire batch is clamped
+    to the largest safe amount so relative timing between lines is
+    preserved. The effective shift is reported when it differs from the
+    requested amount.
+    """
+    bl_idname = "captions.slip"
+    bl_label = "Slip All Lines"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    frames: IntProperty(
+        default=0,
+        description="Frames to shift every line (negative = earlier)",
+    )
+
+    def execute(self, context):
+        scene = context.scene
+        lines = list(scene.captions.lines)
+        if not lines:
+            self.report({'WARNING'}, "No lines to slip.")
+            return {'CANCELLED'}
+        if self.frames == 0:
+            return {'CANCELLED'}
+
+        effective, new_pairs = events.shift_line_timings(lines, self.frames)
+        for line, (s, e) in zip(scene.captions.lines, new_pairs):
+            line.start = s
+            line.end = e
+        _rewrite(scene)
+
+        if effective != self.frames:
+            self.report(
+                {'INFO'},
+                f"Slip clamped: requested {self.frames}, applied {effective} "
+                "(prevented a line from going below frame 0).",
+            )
+        return {'FINISHED'}
+
+
 class CAPTIONS_OT_bulk_import(Operator):
     """Bulk-load dialogue from a JSON array of {text, start, end} objects."""
     bl_idname = "captions.bulk_import"
@@ -267,6 +309,7 @@ _CLASSES = (
     CAPTIONS_OT_remove_line,
     CAPTIONS_OT_move_line,
     CAPTIONS_OT_set_active_frame,
+    CAPTIONS_OT_slip,
     CAPTIONS_OT_bulk_import,
     CAPTIONS_OT_clear_all,
     CAPTIONS_OT_print_api,

@@ -51,6 +51,10 @@ class CaptionSettings(PropertyGroup):
         name="Filter",
         description="Show only lines containing this text (case-insensitive)",
     )
+    slip_amount: IntProperty(
+        default=0,
+        description="Frames to shift every line when 'Slip All' is clicked",
+    )
 
 
 _CLASSES = (CaptionLine, CaptionSettings)

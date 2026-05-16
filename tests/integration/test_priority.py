@@ -188,3 +188,54 @@ def test_add_line_no_active_uses_playhead_in_clear_zone():
     # frame_current=50 with dur=default_duration (48) and gap=12 padding.
     # Padded window [38, 110] vs (500, 600): clear. Rule 3 hits, returns 50.
     assert new_line.start == 50
+
+
+# ---------------------------------------------------------------------------
+# Slip all lines (issue #3)
+# ---------------------------------------------------------------------------
+
+
+def test_slip_shifts_all_lines_forward():
+    _import([
+        {"text": "A", "start": 10, "end": 50},
+        {"text": "B", "start": 60, "end": 100},
+    ])
+    result = bpy.ops.captions.slip(frames=20)
+    assert result == {'FINISHED'}
+    lines = bpy.context.scene.captions.lines
+    assert (lines[0].start, lines[0].end) == (30, 70)
+    assert (lines[1].start, lines[1].end) == (80, 120)
+
+
+def test_slip_negative_clamp_preserves_relative_timing():
+    """A negative slip larger than the earliest start frame must clamp the
+    whole batch so lines don't pile up at 0.
+    """
+    _import([
+        {"text": "A", "start": 5,  "end": 50},
+        {"text": "B", "start": 20, "end": 60},
+    ])
+    result = bpy.ops.captions.slip(frames=-100)
+    assert result == {'FINISHED'}
+    lines = bpy.context.scene.captions.lines
+    # Effective shift: -5 (clamped). A: 5-5=0. B: 20-5=15.
+    assert (lines[0].start, lines[0].end) == (0, 45)
+    assert (lines[1].start, lines[1].end) == (15, 55)
+    # Relative spacing preserved.
+    assert lines[1].start - lines[0].start == 15
+
+
+def test_slip_zero_is_no_op():
+    """Slip(0) returns CANCELLED rather than rebuilding the F-curve."""
+    _import([{"text": "A", "start": 10, "end": 50}])
+    result = bpy.ops.captions.slip(frames=0)
+    assert result == {'CANCELLED'}
+    line = bpy.context.scene.captions.lines[0]
+    assert (line.start, line.end) == (10, 50)
+
+
+def test_slip_on_empty_collection_returns_cancelled():
+    """No lines to slip -> cancel cleanly, don't crash."""
+    # Don't import anything.
+    result = bpy.ops.captions.slip(frames=10)
+    assert result == {'CANCELLED'}

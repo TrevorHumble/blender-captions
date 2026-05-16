@@ -16,7 +16,7 @@ timeline, drag to retime.
 
 ## Install
 
-1. Grab [`dist/captions_tool-0.1.9.zip`](dist/captions_tool-0.1.9.zip) from this
+1. Grab [`dist/captions_tool-0.1.10.zip`](dist/captions_tool-0.1.10.zip) from this
    repo (also attached to the corresponding GitHub Release).
 2. Blender → Edit → Preferences → Add-ons → Install... → pick the zip.
 3. Enable "Animation: Captions".
@@ -29,7 +29,7 @@ try installing again.
 To rebuild the zip after editing the source:
 
 ```powershell
-Compress-Archive -Force -Path .\captions_tool -DestinationPath .\dist\captions_tool-0.1.9.zip
+Compress-Archive -Force -Path .\captions_tool -DestinationPath .\dist\captions_tool-0.1.10.zip
 ```
 
 ## Use
@@ -96,6 +96,7 @@ Operators (all under `bpy.ops.captions.*`):
 | `remove_line` | Remove the active line. |
 | `move_line(direction='UP'\|'DOWN')` | Swap active line's timing with chronological neighbor. |
 | `set_active_frame(which='START'\|'END')` | Set active line's frame to current. |
+| `slip(frames=N)` | Shift every line's start and end by N frames. Negative clamps to keep all lines >= 0 without piling them up. |
 | `clear_all` | Wipe all lines. |
 | `print_api` | Write API docs to `bpy.data.texts["CAPTIONS_README"]`. |
 

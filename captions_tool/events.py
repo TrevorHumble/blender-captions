@@ -113,6 +113,27 @@ def pick_insertion_frame(lines, active_index, frame_current, duration, gap):
     return max(_find_open_slot(ranges, max_end + gap, duration, gap), 0)
 
 
+def shift_line_timings(lines, frames):
+    """Compute the (start, end) pairs for every line after shifting by `frames`.
+
+    Returns `(effective_frames, [(new_start, new_end), ...])`. Negative
+    shifts that would push any line below frame 0 are clamped: the effective
+    shift becomes `-min(starts)`, so the entire batch moves by the largest
+    safe amount. Relative timing between lines is always preserved (lines
+    never pile up at 0 from clamping).
+
+    Pure function. Caller is responsible for applying the new timings to
+    Blender's CollectionProperty.
+    """
+    if not lines:
+        return frames, []
+    if frames < 0:
+        earliest_start = min(int(l.start) for l in lines)
+        frames = max(frames, -earliest_start)
+    new_pairs = [(int(l.start) + frames, int(l.end) + frames) for l in lines]
+    return frames, new_pairs
+
+
 def _occupied_ranges(lines):
     """Sorted [(start, end), ...] tuples from any iterable with .start/.end.
 
