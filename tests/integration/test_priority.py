@@ -239,3 +239,163 @@ def test_slip_on_empty_collection_returns_cancelled():
     # Don't import anything.
     result = bpy.ops.captions.slip(frames=10)
     assert result == {'CANCELLED'}
+
+
+# ---------------------------------------------------------------------------
+# move_line UP/DOWN (v0.1.3 behavior, previously had zero coverage)
+# ---------------------------------------------------------------------------
+
+
+def test_move_line_up_swaps_timing_with_chronological_neighbor():
+    """Pressing UP swaps the active line's timing with the line directly
+    above it in the chronologically-sorted display. Text content stays in
+    its original collection slot; only the start/end frames move.
+    """
+    _import([
+        {"text": "FIRST",  "start": 10, "end": 30},
+        {"text": "SECOND", "start": 50, "end": 70},
+    ])
+    caps = bpy.context.scene.captions
+    caps.active_index = 1  # SECOND
+
+    result = bpy.ops.captions.move_line(direction='UP')
+    assert result == {'FINISHED'}
+
+    # Text remains in collection order; timing swapped.
+    assert caps.lines[0].text == "FIRST"
+    assert caps.lines[1].text == "SECOND"
+    assert (caps.lines[0].start, caps.lines[0].end) == (50, 70)
+    assert (caps.lines[1].start, caps.lines[1].end) == (10, 30)
+
+
+def test_move_line_down_swaps_timing_with_chronological_neighbor():
+    """Symmetric to UP -- pressing DOWN on the first chronological line
+    swaps it later.
+    """
+    _import([
+        {"text": "FIRST",  "start": 10, "end": 30},
+        {"text": "SECOND", "start": 50, "end": 70},
+    ])
+    caps = bpy.context.scene.captions
+    caps.active_index = 0  # FIRST
+
+    bpy.ops.captions.move_line(direction='DOWN')
+
+    assert caps.lines[0].text == "FIRST"
+    assert (caps.lines[0].start, caps.lines[0].end) == (50, 70)
+    assert caps.lines[1].text == "SECOND"
+    assert (caps.lines[1].start, caps.lines[1].end) == (10, 30)
+
+
+def test_move_line_at_extremes_returns_cancelled():
+    """UP at the top of the chronological list, and DOWN at the bottom,
+    both return CANCELLED without mutating data.
+    """
+    _import([
+        {"text": "A", "start": 10, "end": 30},
+        {"text": "B", "start": 50, "end": 70},
+    ])
+    caps = bpy.context.scene.captions
+
+    caps.active_index = 0  # chronologically first
+    assert bpy.ops.captions.move_line(direction='UP') == {'CANCELLED'}
+    assert (caps.lines[0].start, caps.lines[0].end) == (10, 30)
+
+    caps.active_index = 1  # chronologically last
+    assert bpy.ops.captions.move_line(direction='DOWN') == {'CANCELLED'}
+    assert (caps.lines[1].start, caps.lines[1].end) == (50, 70)
+
+
+# ---------------------------------------------------------------------------
+# Issue #12 regression: rapid clicks with varied selection produce uniques
+# ---------------------------------------------------------------------------
+
+
+def test_add_line_five_clicks_varied_selection_produces_unique_starts():
+    """Cycle through three existing lines, clicking + on each. All six
+    resulting lines have unique start frames, and no two lines overlap.
+    The original screenshot bug (lines piling at the same start frame)
+    must not return.
+    """
+    _import([
+        {"text": "A", "start": 10,  "end": 50},
+        {"text": "B", "start": 100, "end": 140},
+        {"text": "C", "start": 200, "end": 240},
+    ])
+    caps = bpy.context.scene.captions
+
+    for i in range(3):
+        caps.active_index = i
+        bpy.ops.captions.add_line(text=f"NEW{i}")
+
+    starts = [line.start for line in caps.lines]
+    assert len(starts) == 6
+    assert len(set(starts)) == 6, f"duplicate starts: {starts}"
+
+    # Sort by start and verify no overlap.
+    sorted_ranges = sorted((line.start, line.end) for line in caps.lines)
+    for prev, nxt in zip(sorted_ranges, sorted_ranges[1:]):
+        assert nxt[0] >= prev[1], f"overlap between {prev} and {nxt}"
+
+
+# ---------------------------------------------------------------------------
+# gap_frames update callback
+# ---------------------------------------------------------------------------
+
+
+def test_gap_frames_change_rebuilds_fcurve():
+    """Setting scene.captions.gap_frames invokes the update callback which
+    rebuilds the F-curve. The sentinel between two abutting lines should
+    shift to reflect the new gap.
+    """
+    _import([
+        {"text": "A", "start": 10, "end": 50},
+        {"text": "B", "start": 50, "end": 90},
+    ])
+    scene = bpy.context.scene
+    m = scene.captions.master_object
+
+    def sentinels_between_a_and_b():
+        """Return -1 sentinel frames inside (10, 50)."""
+        frames = []
+        if m.animation_data and m.animation_data.action:
+            for _container, fc in timeline._iter_fcurves(m.animation_data.action):
+                if fc.data_path != '["caption_idx"]':
+                    continue
+                for kp in fc.keyframe_points:
+                    f = int(round(kp.co.x))
+                    v = int(round(kp.co.y))
+                    if v == -1 and 10 < f < 50:
+                        frames.append(f)
+        return frames
+
+    scene.captions.gap_frames = 12
+    assert 38 in sentinels_between_a_and_b(), (
+        f"with gap=12, expected sentinel at 38, got {sentinels_between_a_and_b()}"
+    )
+
+    scene.captions.gap_frames = 24
+    assert 26 in sentinels_between_a_and_b(), (
+        f"with gap=24, expected sentinel at 26, got {sentinels_between_a_and_b()}"
+    )
+
+    scene.captions.gap_frames = 12  # restore default
+
+
+# ---------------------------------------------------------------------------
+# set_active_frame robustness
+# ---------------------------------------------------------------------------
+
+
+def test_set_active_frame_with_invalid_active_index_returns_cancelled():
+    """If active_index points outside the collection (e.g. -1 or past end),
+    set_active_frame must return CANCELLED cleanly, not crash.
+    """
+    _import([{"text": "A", "start": 10, "end": 30}])
+    caps = bpy.context.scene.captions
+
+    caps.active_index = 99
+    assert bpy.ops.captions.set_active_frame(which='START') == {'CANCELLED'}
+
+    caps.active_index = -1
+    assert bpy.ops.captions.set_active_frame(which='END') == {'CANCELLED'}
