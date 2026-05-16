@@ -72,3 +72,96 @@ def compute_events(lines, gap_frames: int = 0):
         by_frame[sentinel_frame] = NO_CAPTION
 
     return sorted(by_frame.items())
+
+
+def pick_insertion_frame(lines, active_index, frame_current, duration, gap):
+    """Decide a start frame for a new line. Returns an int >= 0.
+
+    The decision tree:
+      Rule 1: lines is empty -- return max(frame_current, 0).
+      Rule 2: active_index is valid (0 <= active_index < len(lines)) --
+              chain off the active line by returning the first open slot at or
+              after active.end + gap.
+      Rule 3: no active line and the window [frame_current, frame_current +
+              duration] fits cleanly against all existing ranges with gap
+              padding on both sides -- honor the playhead and return
+              max(frame_current, 0).
+      Rule 4: otherwise -- append at the tail by returning the first open
+              slot at or after max(end for _, end in ranges) + gap.
+
+    Existing lines are never shifted to make room. When the natural slot is
+    blocked, the slot-finder walks forward through the occupied ranges until
+    a clear window opens. The returned frame is always clamped to >= 0.
+    """
+    if not lines:
+        return max(int(frame_current), 0)
+
+    ranges = _occupied_ranges(lines)
+
+    if 0 <= active_index < len(lines):
+        active = lines[active_index]
+        return max(_find_open_slot(ranges, active.end + gap, duration, gap), 0)
+
+    # Clamp the playhead to >= 0 BEFORE checking fit. Otherwise a wildly
+    # negative frame_current can pass _fits (the padded window misses positive
+    # ranges entirely) and return 0, which may overlap an existing line.
+    clamped = max(int(frame_current), 0)
+    if _fits(ranges, clamped, duration, gap):
+        return clamped
+
+    max_end = max(end for _, end in ranges)
+    return max(_find_open_slot(ranges, max_end + gap, duration, gap), 0)
+
+
+def _occupied_ranges(lines):
+    """Sorted [(start, end), ...] tuples from any iterable with .start/.end.
+
+    Duplicates are preserved (legacy data may have multiple lines with the
+    same start frame). Sort key is start; ties broken by end.
+    """
+    return sorted((int(l.start), int(l.end)) for l in lines)
+
+
+def _find_open_slot(ranges, after, duration, gap):
+    """First frame >= `after` where the window [frame, frame + duration] does
+    not overlap any range in `ranges`, allowing `gap` frames of padding on
+    both sides.
+
+    Collision predicate: a range (s, e) blocks the candidate window iff
+    `frame < e AND frame + duration > s` (strict half-open -- frame == e is
+    free, matching the sentinel-at-line.end convention used elsewhere).
+    When blocked by (s, e), the next probe is e + gap.
+
+    Walks forward through `ranges` until an open slot is found. Always
+    returns a valid frame, never raises, never None. With no ranges the
+    function returns `after` unchanged.
+    """
+    candidate = int(after)
+    while True:
+        blocker = _blocking_range(ranges, candidate, duration, gap)
+        if blocker is None:
+            return candidate
+        # A blocker (s, e) must have e + gap > candidate (otherwise the padded
+        # window couldn't have reached it), so the next probe always advances.
+        _, blocker_end = blocker
+        candidate = blocker_end + gap
+
+
+def _blocking_range(ranges, frame, duration, gap):
+    """Return the first range that overlaps the padded candidate window, or
+    None if the window is clear. Used by `_find_open_slot`.
+    """
+    window_start = frame - gap
+    window_end = frame + duration + gap
+    for s, e in ranges:
+        if window_start < e and window_end > s:
+            return (s, e)
+    return None
+
+
+def _fits(ranges, frame, duration, gap):
+    """True if [frame, frame + duration] (padded by `gap` on both sides) fits
+    against `ranges` without collision. Thin wrapper used by Rule 3 of
+    `pick_insertion_frame`.
+    """
+    return _blocking_range(ranges, int(frame), int(duration), int(gap)) is None
