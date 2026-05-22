@@ -13,6 +13,7 @@ Encoding:
   - Lines are addressed by stable `id`, not by collection position.
 """
 import bpy
+from typing import List, Optional, Tuple
 
 from .events import compute_events, NO_CAPTION as _NONE
 
@@ -49,26 +50,40 @@ def write(master_obj, lines, gap_frames=0):
         fc.update()
 
 
-def read(master_obj):
-    """Return [(line_id, start, end), ...] derived from the F-curve.
+def _parse_keyframes(keyframe_points) -> List[Tuple[int, int, Optional[int]]]:
+    """Pure logic: convert sorted (frame, value) pairs into [(line_id, start, end_or_None)].
 
-    Each positive-valued keyframe is a line start. The line's effective end is
-    the next keyframe in time order (whether sentinel or another line's start).
+    `end` is None when the F-curve does not encode a dedicated end-sentinel for this
+    line -- either because a later overlapping line covers it, or because this is the
+    last line with no trailing sentinel. Callers should preserve the existing
+    PropertyGroup `end` value in that case.
     """
-    fc = _get_fcurve(master_obj)
-    if fc is None:
-        return []
     keys = sorted(
-        ((int(round(kp.co.x)), int(round(kp.co.y))) for kp in fc.keyframe_points),
+        ((int(round(kp.co.x)), int(round(kp.co.y))) for kp in keyframe_points),
         key=lambda k: k[0],
     )
     result = []
     for i, (frame, value) in enumerate(keys):
         if value < 0:
             continue
-        end = keys[i + 1][0] if i + 1 < len(keys) else frame
+        if i + 1 < len(keys):
+            next_frame, next_value = keys[i + 1]
+            end = next_frame if next_value == _NONE else None
+        else:
+            end = None
         result.append((value, frame, end))
     return result
+
+
+def read(master_obj):
+    """Return [(line_id, start, end_or_None), ...] derived from the F-curve.
+
+    `end` is the frame of a dedicated -1 sentinel when one exists; otherwise None
+    (the line is overlapped by a later one, or is the trailing line). See
+    _parse_keyframes for details.
+    """
+    fc = _get_fcurve(master_obj)
+    return _parse_keyframes(fc.keyframe_points) if fc is not None else []
 
 
 def active_line_id(master_obj, frame):

@@ -72,7 +72,7 @@ def on_depsgraph_update(scene, depsgraph):
                 s, e = by_id[line.id]
                 if line.start != s:
                     line.start = s
-                if line.end != e:
+                if e is not None and line.end != e:
                     line.end = e
     finally:
         end_write()
